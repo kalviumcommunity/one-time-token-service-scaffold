@@ -17,6 +17,11 @@ async function main() {
   const results = await Promise.all([
     // consumeToken(id), consumeToken(id), consumeToken(id),
     // consumeToken(id), consumeToken(id),
+    consumeToken(id),
+    consumeToken(id),
+    consumeToken(id),
+    consumeToken(id),
+    consumeToken(id),
   ]);
 
   const winners = results.filter((r) => r.ok).length;
