@@ -1,0 +1,1 @@
+Implementation completed: issueToken uses crypto.randomBytes(16), JSON.stringify, and atomic SET ... EX ... NX; consumeToken uses atomic GETDEL; test.js uses Promise.all with 5 consumers and asserts winners === 1. The expected passing output is winners: 1 and PASS: token was single-use. Test execution requires a Redis instance configured via REDIS_URL.
