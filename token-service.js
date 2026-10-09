@@ -27,10 +27,26 @@ const keyFor = (id) => "token:" + id;
  * @param {number} ttlSeconds   Seconds until the token expires.
  * @returns {Promise<string>}   The token id to hand to the user.
  */
+
 export async function issueToken(payload, ttlSeconds) {
-  // TODO: implement
-  throw new Error("issueToken not implemented");
+  const tokenId = crypto.randomBytes(16).toString("hex");
+  const value = JSON.stringify(payload);
+
+  const result = await redis.set(
+    keyFor(tokenId),
+    value,
+    "EX",
+    ttlSeconds,
+    "NX"
+  );
+
+  if (result !== "OK") {
+    throw new Error("Failed to issue token");
+  }
+
+  return tokenId;
 }
+
 
 /**
  * Consume a token exactly once.
@@ -47,9 +63,31 @@ export async function issueToken(payload, ttlSeconds) {
  * @returns {Promise<{ ok: true, payload: object } | { ok: false, reason: string }>}
  */
 export async function consumeToken(tokenId) {
-  // TODO: implement
-  throw new Error("consumeToken not implemented");
+  const value = await redis.eval(
+    `
+    local value = redis.call('GET', KEYS[1])
+    if value ~= false then
+      redis.call('DEL', KEYS[1])
+    end
+    return value
+    `,
+    1,
+    keyFor(tokenId)
+  );
+
+  if (value === null) {
+    return {
+      ok: false,
+      reason: "invalid"
+    };
+  }
+
+  return {
+    ok: true,
+    payload: JSON.parse(value)
+  };
 }
+
 
 // Allow other files to close the connection cleanly (used by test.js).
 export function closeRedis() {
