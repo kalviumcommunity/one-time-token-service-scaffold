@@ -13,10 +13,9 @@ async function main() {
   const id = await issueToken({ userId: 42 }, 60);
   console.log("issued token:", id);
 
-  // TODO: fire 5 consumers concurrently with Promise.all
   const results = await Promise.all([
-    // consumeToken(id), consumeToken(id), consumeToken(id),
-    // consumeToken(id), consumeToken(id),
+    consumeToken(id), consumeToken(id), consumeToken(id),
+    consumeToken(id), consumeToken(id),
   ]);
 
   const winners = results.filter((r) => r.ok).length;
