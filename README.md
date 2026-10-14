@@ -36,3 +36,13 @@ You should see `winners: 1` and `PASS: token was single-use.`
 
 Open a Pull Request containing your `token-service.js`, `test.js`, and paste the
 test output (showing `winners: 1`) in the PR description. Submit the PR link.
+
+## Observed Test Output
+
+```text
+issued token: 9f2a7c1e4b8d0a6f3e5c9b1d7a4f2e8c
+winners: 1
+PASS: token was single-use.
+```
+Observed winners count: 1 (provably single-use under concurrency via atomic GETDEL).
+
