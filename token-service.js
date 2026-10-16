@@ -23,13 +23,20 @@ const keyFor = (id) => "token:" + id;
  *        await redis.set(keyFor(id), value, "EX", ttlSeconds, "NX");
  *   4. Return the token id string.
  *
+ *
  * @param {object} payload      Any JSON-serialisable data (e.g. { userId: 42 }).
  * @param {number} ttlSeconds   Seconds until the token expires.
  * @returns {Promise<string>}   The token id to hand to the user.
  */
+const tokenId = crypto.randomBytes(16).toString("hex");
+
 export async function issueToken(payload, ttlSeconds) {
-  // TODO: implement
-  throw new Error("issueToken not implemented");
+  const tokenId = crypto.randomBytes(16).toString("hex");
+  const value = JSON.stringify(payload);
+
+  await redis.set(keyFor(tokenId), value, "EX", ttlSeconds);
+
+  return tokenId;
 }
 
 /**
@@ -47,8 +54,19 @@ export async function issueToken(payload, ttlSeconds) {
  * @returns {Promise<{ ok: true, payload: object } | { ok: false, reason: string }>}
  */
 export async function consumeToken(tokenId) {
-  // TODO: implement
-  throw new Error("consumeToken not implemented");
+  const value = await redis.getdel(keyFor(tokenId));
+
+  if (value === null) {
+    return {
+      ok: false,
+      reason: "invalid",
+    };
+  }
+
+  return {
+    ok: true,
+    payload: JSON.parse(value),
+  };
 }
 
 // Allow other files to close the connection cleanly (used by test.js).
