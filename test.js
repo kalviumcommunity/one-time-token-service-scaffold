@@ -1,31 +1,48 @@
-// test.js
-// Prove the service is single-use under concurrency.
-//
-// TODO:
-//   1. Issue one token.
-//   2. Fire 5 consumeToken calls AT ONCE with Promise.all.
-//   3. Count how many returned { ok: true } and assert it is exactly 1.
-//   4. Print the winners count so it shows in the output.
+import assert from "node:assert/strict";
+import { issueToken, consumeToken } from "./token-service.js";
 
-import { issueToken, consumeToken, closeRedis } from "./token-service.js";
+async function test() {
+  const payload = {
+    userId: 101,
+    email: "test@example.com"
+  };
 
-async function main() {
-  const id = await issueToken({ userId: 42 }, 60);
-  console.log("issued token:", id);
+  // Issue one token
+  const tokenId = await issueToken(payload, 60);
 
-  // TODO: fire 5 consumers concurrently with Promise.all
-  const results = await Promise.all([
-    // consumeToken(id), consumeToken(id), consumeToken(id),
-    // consumeToken(id), consumeToken(id),
-  ]);
+  console.log("issued token:", tokenId);
 
-  const winners = results.filter((r) => r.ok).length;
-  console.log("winners:", winners); // expect exactly 1
+  // Fire 5 consumers simultaneously
+  const results = await Promise.all(
+    Array.from({ length: 5 }, () => consumeToken(tokenId))
+  );
 
-  console.assert(winners === 1, "SINGLE-USE VIOLATED! winners = " + winners);
-  if (winners === 1) console.log("PASS: token was single-use.");
+  // Count successful consumers
+  const winners = results.filter(result => result.ok === true).length;
 
-  await closeRedis();
+  console.log("winners:", winners);
+
+  // Exactly one consumer must win
+  assert.equal(winners, 1);
+
+  // Verify the successful consumer received the payload
+  const winner = results.find(result => result.ok === true);
+
+  assert.deepEqual(winner.payload, payload);
+
+  // Verify the remaining consumers were rejected
+  const losers = results.filter(result => result.ok === false);
+
+  assert.equal(losers.length, 4);
+
+  for (const result of losers) {
+    assert.equal(result.reason, "invalid");
+  }
+
+  console.log("PASS: token was single-use.");
 }
 
-main();
+test().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
