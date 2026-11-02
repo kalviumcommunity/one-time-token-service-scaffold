@@ -7,25 +7,54 @@
 //   3. Count how many returned { ok: true } and assert it is exactly 1.
 //   4. Print the winners count so it shows in the output.
 
-import { issueToken, consumeToken, closeRedis } from "./token-service.js";
 
-async function main() {
-  const id = await issueToken({ userId: 42 }, 60);
-  console.log("issued token:", id);
 
-  // TODO: fire 5 consumers concurrently with Promise.all
-  const results = await Promise.all([
-    // consumeToken(id), consumeToken(id), consumeToken(id),
-    // consumeToken(id), consumeToken(id),
-  ]);
+import dotenv from "dotenv";
+import assert from "assert";
+import { issueToken, consumeToken, redis } from "./token-service.js";
 
-  const winners = results.filter((r) => r.ok).length;
-  console.log("winners:", winners); // expect exactly 1
+dotenv.config();
 
-  console.assert(winners === 1, "SINGLE-USE VIOLATED! winners = " + winners);
-  if (winners === 1) console.log("PASS: token was single-use.");
+async function testOneTimeToken() {
+    try {
+        const payload = {
+            userId: 101,
+            username: "Bharath"
+        };
 
-  await closeRedis();
+        // Issue one token
+        const tokenId = await issueToken(payload, 60);
+
+        console.log("issued token:", tokenId);
+
+        // Five concurrent consumers
+        const results = await Promise.all([
+            consumeToken(tokenId),
+            consumeToken(tokenId),
+            consumeToken(tokenId),
+            consumeToken(tokenId),
+            consumeToken(tokenId)
+        ]);
+
+        // Count successful consumers
+        const winners = results.filter(result => result.ok).length;
+
+        console.log("winners:", winners);
+
+        // Verify exactly one winner
+        assert.strictEqual(winners, 1);
+
+        console.log("PASS: token was single-use.");
+
+    } catch (error) {
+        console.error("FAIL:", error);
+        process.exitCode = 1;
+
+    } finally {
+        await redis.quit();
+    }
 }
 
-main();
+testOneTimeToken();
+
+
