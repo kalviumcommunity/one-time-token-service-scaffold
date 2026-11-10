@@ -1,31 +1,52 @@
-// test.js
-// Prove the service is single-use under concurrency.
-//
-// TODO:
-//   1. Issue one token.
-//   2. Fire 5 consumeToken calls AT ONCE with Promise.all.
-//   3. Count how many returned { ok: true } and assert it is exactly 1.
-//   4. Print the winners count so it shows in the output.
 
-import { issueToken, consumeToken, closeRedis } from "./token-service.js";
+ // test.js
+ // Prove the service is single-use under concurrency.
+
+import {
+  issueToken,
+  consumeToken,
+  closeRedis
+} from "./token-service.js";
 
 async function main() {
-  const id = await issueToken({ userId: 42 }, 60);
-  console.log("issued token:", id);
+  try {
+    // 1. Issue one token.
+    const id = await issueToken({ userId: 42 }, 60);
 
-  // TODO: fire 5 consumers concurrently with Promise.all
-  const results = await Promise.all([
-    // consumeToken(id), consumeToken(id), consumeToken(id),
-    // consumeToken(id), consumeToken(id),
-  ]);
+    console.log("issued token:", id);
 
-  const winners = results.filter((r) => r.ok).length;
-  console.log("winners:", winners); // expect exactly 1
+    // 2. Fire five consumers concurrently.
+    const results = await Promise.all([
+      consumeToken(id),
+      consumeToken(id),
+      consumeToken(id),
+      consumeToken(id),
+      consumeToken(id)
+    ]);
 
-  console.assert(winners === 1, "SINGLE-USE VIOLATED! winners = " + winners);
-  if (winners === 1) console.log("PASS: token was single-use.");
+    // 3. Count successful consumers.
+    const winners = results.filter((r) => r.ok).length;
 
-  await closeRedis();
+    console.log("winners:", winners);
+
+    // 4. Assert exactly one winner.
+    console.assert(
+      winners === 1,
+      "SINGLE-USE VIOLATED! winners = " + winners
+    );
+
+    if (winners === 1) {
+      console.log("PASS: token was single-use.");
+    } else {
+      process.exitCode = 1;
+    }
+  } finally {
+    // 5. Close Redis connection.
+    await closeRedis();
+  }
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
