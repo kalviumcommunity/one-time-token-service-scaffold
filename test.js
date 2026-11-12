@@ -1,31 +1,44 @@
-// test.js
-// Prove the service is single-use under concurrency.
-//
-// TODO:
-//   1. Issue one token.
-//   2. Fire 5 consumeToken calls AT ONCE with Promise.all.
-//   3. Count how many returned { ok: true } and assert it is exactly 1.
-//   4. Print the winners count so it shows in the output.
 
-import { issueToken, consumeToken, closeRedis } from "./token-service.js";
+import assert from "node:assert/strict";
+import { issueToken, consumeToken, redis } from "./token-service.js";
 
-async function main() {
-  const id = await issueToken({ userId: 42 }, 60);
-  console.log("issued token:", id);
+async function run() {
+  try {
+    // 1. Issue one token
+    const payload = {
+      userId: 101,
+      action: "password-reset"
+    };
 
-  // TODO: fire 5 consumers concurrently with Promise.all
-  const results = await Promise.all([
-    // consumeToken(id), consumeToken(id), consumeToken(id),
-    // consumeToken(id), consumeToken(id),
-  ]);
+    const tokenId = await issueToken(payload, 60);
 
-  const winners = results.filter((r) => r.ok).length;
-  console.log("winners:", winners); // expect exactly 1
+    console.log("issued token:", tokenId);
 
-  console.assert(winners === 1, "SINGLE-USE VIOLATED! winners = " + winners);
-  if (winners === 1) console.log("PASS: token was single-use.");
+    // 2. Five consumers attempt simultaneously
+    const results = await Promise.all([
+      consumeToken(tokenId),
+      consumeToken(tokenId),
+      consumeToken(tokenId),
+      consumeToken(tokenId),
+      consumeToken(tokenId)
+    ]);
 
-  await closeRedis();
+    // 3. Count successful consumers
+    const winners = results.filter(result => result.ok).length;
+
+    console.log("winners:", winners);
+
+    // 4. Assert exactly one consumer succeeds
+    assert.equal(winners, 1, "Exactly one consumer must win");
+
+    console.log("PASS: token was single-use.");
+
+  } catch (error) {
+    console.error("FAIL:", error.message);
+    process.exitCode = 1;
+  } finally {
+    redis.disconnect();
+  }
 }
 
-main();
+run();
