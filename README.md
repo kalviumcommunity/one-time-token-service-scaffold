@@ -1,28 +1,26 @@
-# One-Time Token Service — Starter Scaffold
+# One-Time Token Service — Completed Assignment
 
-Build a single-use, expiring token service backed by Redis. You implement two
-functions and a test that proves a token can be used **at most once**, even when
-five consumers hit it at the same instant.
-
-This scaffold gives you the plumbing (dependencies, `.env`, file shapes). Your
-job is the two functions and the concurrency test — see the `TODO`s in the code.
+A single-use, expiring token service backed by Redis.
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env      # then set REDIS_URL (local Docker Redis from LU 4.0.1)
-docker start redis-m4     # make sure your Redis is running
+cp .env.example .env
+# Set REDIS_URL in .env
+docker start redis-m4
 ```
 
-## What to implement
+## Implementation
 
-- **`token-service.js`**
-  - `issueToken(payload, ttlSeconds)` — random id + JSON payload + atomic `SET ... EX`.
-  - `consumeToken(tokenId)` — atomic `GETDEL`; return `{ ok, payload }` / `{ ok: false, reason }`.
-- **`test.js`**
-  - Issue one token, fire **5 `consumeToken` calls at once** with `Promise.all`,
-    assert **exactly one** succeeds.
+- `issueToken(payload, ttlSeconds)` generates a 128-bit random token ID using
+  `crypto.randomBytes(16).toString("hex")`, serializes the payload with
+  `JSON.stringify`, and stores it using one atomic `SET ... EX ... NX` command.
+- `consumeToken(tokenId)` uses Redis `GETDEL` to read and delete the token
+  atomically. It returns `{ ok: true, payload }` on success or
+  `{ ok: false, reason: "invalid" }` when the token is missing or expired.
+- `test.js` launches five `consumeToken` calls concurrently with `Promise.all`
+  and asserts that exactly one succeeds.
 
 ## Run the test
 
@@ -30,9 +28,19 @@ docker start redis-m4     # make sure your Redis is running
 npm test
 ```
 
-You should see `winners: 1` and `PASS: token was single-use.`
+Expected successful output:
+
+```text
+issued token: <32-character-hex-token>
+winners: 1
+PASS: token was single-use.
+```
+
+**Observed result:** Run `npm test` against your configured Redis instance and
+paste the actual output showing `winners: 1` into your GitHub PR description.
+The expected output above is not a claim that the test has already been run.
 
 ## Submit
 
-Open a Pull Request containing your `token-service.js`, `test.js`, and paste the
-test output (showing `winners: 1`) in the PR description. Submit the PR link.
+Push the completed `token-service.js`, `test.js`, and this README to your fork,
+then open a Pull Request and submit its URL in Kalvium.
