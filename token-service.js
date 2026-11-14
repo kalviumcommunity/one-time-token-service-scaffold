@@ -15,7 +15,7 @@ const keyFor = (id) => "token:" + id;
 
 /**
  * Issue a single-use token that expires after `ttlSeconds`.
- *
+ *34
  * TODO:
  *   1. Generate a random id: crypto.randomBytes(16).toString("hex")  -> 32 hex chars
  *   2. JSON.stringify the payload.
@@ -29,7 +29,12 @@ const keyFor = (id) => "token:" + id;
  */
 export async function issueToken(payload, ttlSeconds) {
   // TODO: implement
-  throw new Error("issueToken not implemented");
+  const tokenId = crypto.randomBytes(16).toString("hex");
+  const value = JSON.stringify(payload);
+  await redis.set(keyFor(tokenId), value, "EX", ttlSeconds, "NX");
+  return tokenId;
+
+  //throw new Error("issueToken not implemented");
 }
 
 /**
@@ -47,8 +52,13 @@ export async function issueToken(payload, ttlSeconds) {
  * @returns {Promise<{ ok: true, payload: object } | { ok: false, reason: string }>}
  */
 export async function consumeToken(tokenId) {
+  const value = await redis.getdel(keyFor(tokenId));
+  if (value === null){
+    return {ok:false, reason:"invalid"};
+  }
+  return { ok: true, payload: JSON.parse(value) }
   // TODO: implement
-  throw new Error("consumeToken not implemented");
+  //throw new Error("consumeToken not implemented");
 }
 
 // Allow other files to close the connection cleanly (used by test.js).
