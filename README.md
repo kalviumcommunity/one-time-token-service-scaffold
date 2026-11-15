@@ -36,3 +36,16 @@ You should see `winners: 1` and `PASS: token was single-use.`
 
 Open a Pull Request containing your `token-service.js`, `test.js`, and paste the
 test output (showing `winners: 1`) in the PR description. Submit the PR link.
+### Assignment Test Result
+
+Implemented a one-time token service using Redis.
+
+- Tokens are generated using crypto.randomBytes(16).
+- Token payloads are stored as JSON.
+- SET EX NX ensures atomic storage with expiration.
+- GETDEL ensures atomic single-use consumption.
+- Five concurrent consumers were tested using Promise.all.
+
+**Observed result: winners: 1**
+
+The test confirms that exactly one consumer can successfully use a token.
