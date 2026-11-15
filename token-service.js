@@ -7,6 +7,7 @@
 import crypto from "node:crypto";
 import Redis from "ioredis";
 import "dotenv/config";
+import { json } from "node:stream/consumers";
 
 const redis = new Redis(process.env.REDIS_URL);
 
@@ -29,7 +30,9 @@ const keyFor = (id) => "token:" + id;
  */
 export async function issueToken(payload, ttlSeconds) {
   // TODO: implement
-  throw new Error("issueToken not implemented");
+  const randomid= crypto.randomBytes(16).toString("hex");
+  await redis.set(keyFor(randomid),JSON.stringify(payload),"ex",ttlSeconds,"nx");
+  return randomid;
 }
 
 /**
@@ -48,7 +51,14 @@ export async function issueToken(payload, ttlSeconds) {
  */
 export async function consumeToken(tokenId) {
   // TODO: implement
-  throw new Error("consumeToken not implemented");
+  const value=await redis.getdel(keyFor(tokenId));
+  if(value===null){
+    return { ok: false, reason: "invalid" }
+  }
+  else{
+    return { ok: true, payload: JSON.parse(value) }
+  }
+
 }
 
 // Allow other files to close the connection cleanly (used by test.js).
