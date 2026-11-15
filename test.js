@@ -15,8 +15,8 @@ async function main() {
 
   // TODO: fire 5 consumers concurrently with Promise.all
   const results = await Promise.all([
-    // consumeToken(id), consumeToken(id), consumeToken(id),
-    // consumeToken(id), consumeToken(id),
+    consumeToken(id), consumeToken(id), consumeToken(id),
+    consumeToken(id), consumeToken(id),
   ]);
 
   const winners = results.filter((r) => r.ok).length;
